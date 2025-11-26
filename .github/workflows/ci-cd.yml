@@ -1,0 +1,314 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build ML Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./ml-service
+        file: ./ml-service/Dockerfile
+        push: false
+        tags: aisoc/ml-service:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build Frontend
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: false
+        tags: aisoc/frontend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build Log Ingestion Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./log-ingestion-service
+        file: ./log-ingestion-service/Dockerfile
+        push: false
+        tags: aisoc/log-ingestion:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build Automation Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./automation-service
+        file: ./automation-service/Dockerfile
+        push: false
+        tags: aisoc/automation-service:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker Compose Build
+      run: |
+        docker-compose -f docker-compose.yml config
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: soc_user
+          POSTGRES_PASSWORD: soc_password
+          POSTGRES_DB: soc_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      mongodb:
+        image: mongo:7.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: admin123
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Python dependencies
+      run: |
+        cd ml-service
+        pip install -r requirements.txt
+
+    - name: Run Python tests (if any)
+      run: |
+        cd ml-service
+        # Add your test commands here
+        # python -m pytest tests/ || echo "No tests found"
+        echo "Tests would run here"
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+  push-to-registry:
+    name: Push Docker Images to Registry
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata for ML Service
+      id: meta-ml
+      uses: docker/metadata-action@v5
+      with:
+        images: aisoc/ml-service
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push ML Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./ml-service
+        file: ./ml-service/Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta-ml.outputs.tags }}
+        labels: ${{ steps.meta-ml.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Extract metadata for Frontend
+      id: meta-frontend
+      uses: docker/metadata-action@v5
+      with:
+        images: aisoc/frontend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Frontend
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta-frontend.outputs.tags }}
+        labels: ${{ steps.meta-frontend.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Extract metadata for Log Ingestion
+      id: meta-log
+      uses: docker/metadata-action@v5
+      with:
+        images: aisoc/log-ingestion
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Log Ingestion Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./log-ingestion-service
+        file: ./log-ingestion-service/Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta-log.outputs.tags }}
+        labels: ${{ steps.meta-log.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Extract metadata for Automation Service
+      id: meta-automation
+      uses: docker/metadata-action@v5
+      with:
+        images: aisoc/automation-service
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Automation Service
+      uses: docker/build-push-action@v5
+      with:
+        context: ./automation-service
+        file: ./automation-service/Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta-automation.outputs.tags }}
+        labels: ${{ steps.meta-automation.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: [build, test, push-to-registry]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: ${{ secrets.DEPLOY_URL || 'https://your-domain.com' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to server via SSH
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT || 22 }}
+        script: |
+          cd ${{ secrets.DEPLOY_PATH || '/opt/aisoc' }}
+          
+          # Pull latest code
+          git pull origin main
+          
+          # Pull latest Docker images (if using registry)
+          docker-compose pull || true
+          
+          # Stop existing containers
+          docker-compose down
+          
+          # Start services with new images
+          docker-compose up -d --build
+          
+          # Clean up old images
+          docker image prune -f
+          
+          # Health check
+          sleep 10
+          docker-compose ps
+
+    - name: Verify deployment
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT || 22 }}
+        script: |
+          # Wait for services to be ready
+          sleep 30
+          
+          # Check if services are running
+          docker-compose ps
+          
+          # Test endpoints
+          curl -f http://localhost:3000 || exit 1
+          curl -f http://localhost:8000/docs || exit 1
+          curl -f http://localhost:8080/actuator/health || exit 1
+
