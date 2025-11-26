@@ -1,0 +1,271 @@
+.realtime-threats {
+  padding: 20px;
+  background: linear-gradient(135deg, #1a1f3a 0%, #0f1419 100%);
+  border-radius: 12px;
+  margin-bottom: 30px;
+}
+
+.threats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.threats-header h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.threat-stats-badge {
+  display: flex;
+  gap: 15px;
+}
+
+.stat-item {
+  padding: 8px 15px;
+  background: rgba(102, 126, 234, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.stat-item strong {
+  color: #667eea;
+  margin-right: 5px;
+}
+
+.no-threats {
+  text-align: center;
+  padding: 60px 20px;
+  color: #888;
+}
+
+.no-threats-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.no-threats p {
+  margin: 10px 0;
+  font-size: 18px;
+}
+
+.subtext {
+  font-size: 14px !important;
+  color: #666 !important;
+}
+
+.threats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.threat-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.threat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.threat-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(102, 126, 234, 0.5);
+  transform: translateX(5px);
+}
+
+.threat-card:hover::before {
+  opacity: 1;
+}
+
+.threat-icon {
+  font-size: 48px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.threat-content {
+  flex: 1;
+}
+
+.threat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.threat-type {
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.severity-badge {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.severity-badge.severity-critical {
+  background: rgba(255, 71, 87, 0.2);
+  color: #ff4757;
+  border: 1px solid rgba(255, 71, 87, 0.5);
+}
+
+.severity-badge.severity-high {
+  background: rgba(255, 99, 72, 0.2);
+  color: #ff6348;
+  border: 1px solid rgba(255, 99, 72, 0.5);
+}
+
+.severity-badge.severity-medium {
+  background: rgba(255, 165, 2, 0.2);
+  color: #ffa502;
+  border: 1px solid rgba(255, 165, 2, 0.5);
+}
+
+.severity-badge.severity-low {
+  background: rgba(46, 213, 115, 0.2);
+  color: #2ed573;
+  border: 1px solid rgba(46, 213, 115, 0.5);
+}
+
+.threat-details {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.detail-item {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.detail-label {
+  color: #888;
+}
+
+.detail-value {
+  color: #fff;
+  font-weight: 500;
+}
+
+.detail-value.score {
+  color: #667eea;
+}
+
+.threat-description {
+  color: #aaa;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.threat-arrow {
+  font-size: 24px;
+  color: #667eea;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.threat-card:hover .threat-arrow {
+  opacity: 1;
+  transform: translateX(5px);
+}
+
+.threats-footer {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.update-info {
+  color: #666;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* Pulse animation for live indicator */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.threats-header h2::before {
+  content: '🔴';
+  animation: pulse 2s infinite;
+  margin-right: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .threats-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .threat-stats-badge {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .threat-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .threat-icon {
+    align-self: center;
+  }
+
+  .threat-details {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .threat-arrow {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+  }
+}
+

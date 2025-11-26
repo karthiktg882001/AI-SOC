@@ -1,0 +1,16 @@
+version: "2"
+authtoken: 2lKJLvVJ5YeWq3tpskEQRuQGos1_35ja74h4maKCsk4FKefzb
+
+tunnels:
+  frontend:
+    addr: 3000
+    proto: http
+    bind_tls: true  # Use HTTPS
+    inspect: true   # Enable web interface
+    
+  ml-service:
+    addr: 8000
+    proto: http
+    bind_tls: true
+    inspect: true
+

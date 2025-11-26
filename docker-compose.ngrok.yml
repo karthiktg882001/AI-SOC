@@ -1,0 +1,22 @@
+# Docker Compose configuration for ngrok tunnel
+# This allows running ngrok in a container
+
+version: '3.8'
+
+services:
+  ngrok:
+    image: ngrok/ngrok:latest
+    command: start --all --config /etc/ngrok.yml
+    ports:
+      - "4040:4040"  # Ngrok web interface
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml:ro
+    networks:
+      - soc-network
+    environment:
+      - NGROK_AUTHTOKEN=2lKJLvVJ5YeWq3tpskEQRuQGos1_35ja74h4maKCsk4FKefzb
+
+networks:
+  soc-network:
+    external: true
+
